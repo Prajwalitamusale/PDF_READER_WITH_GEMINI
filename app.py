@@ -82,7 +82,12 @@ h1, h2, h3, .hero-title {
   display: flex; align-items: center; justify-content: space-between;
   padding: 4px 0 18px 0; border-bottom: 1px solid #232833; margin-bottom: 28px;
 }
-.nav-brand { font-family: "Fraunces", serif; font-size: 1.35rem; font-weight: 600; color: #F3F0E8; }
+.nav-brand {
+  font-family: "Fraunces", serif; font-size: 1.4rem; font-weight: 600; color: #F3F0E8;
+  display: inline-flex; align-items: center; gap: 10px;
+}
+.nav-brand .fit { color: #D4F562; font-style: italic; font-weight: 500; }
+.logo-mark { width: 28px; height: 28px; display: block; flex-shrink: 0; }
 .nav-meta { font-size: 0.8rem; color: #9AA3B2; }
 
 .hero-kicker {
@@ -179,6 +184,17 @@ div[data-testid="stFileUploader"] section { background: #0A0C0F; border-radius: 
   .stats, .cards, .steps { grid-template-columns: 1fr; }
 }
 </style>
+"""
+
+BRAND = """
+<span class="nav-brand">
+  <svg class="logo-mark" viewBox="0 0 32 32" aria-hidden="true">
+    <rect x="1.5" y="1.5" width="29" height="29" rx="8" fill="#14181F" stroke="#D4F562" stroke-width="1.5"/>
+    <rect x="7" y="8" width="7" height="16" rx="2" fill="#D4F562"/>
+    <rect x="17" y="11" width="8" height="13" rx="2" fill="#F3F0E8"/>
+  </svg>
+  JD<span class="fit">Fit</span>
+</span>
 """
 
 
@@ -491,8 +507,8 @@ def gate_password() -> bool:
     if st.session_state.get("jdfit_ok"):
         return True
     st.markdown(
-        """
-        <div class="nav"><div class="nav-brand">JDFit</div><div class="nav-meta">Private beta</div></div>
+        f"""
+        <div class="nav">{BRAND}<div class="nav-meta">Private beta</div></div>
         <div class="hero-kicker">Tester access</div>
         <p class="hero-title">Enter the <em>shared password</em> to continue.</p>
         <p class="hero-sub">This build is invite-only so the free Gemini quota lasts for the first testers.</p>
@@ -510,9 +526,9 @@ def gate_password() -> bool:
 
 def render_hero() -> None:
     st.markdown(
-        """
+        f"""
         <div class="nav">
-          <div class="nav-brand">JDFit</div>
+          {BRAND}
           <div class="nav-meta">Resume to interview-ready · India</div>
         </div>
         <div class="hero-kicker">AI career toolkit · MVP</div>
@@ -647,7 +663,7 @@ def render_results(result: dict) -> None:
 
 
 def main():
-    st.set_page_config(page_title="JDFit — Resume to interview-ready", page_icon="J", layout="wide")
+    st.set_page_config(page_title="JDFit · Resume to interview-ready", page_icon="◈", layout="wide")
     inject_css()
     if not gate_password():
         return
