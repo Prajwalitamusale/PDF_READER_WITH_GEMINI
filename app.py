@@ -1,3 +1,4 @@
+import html
 import io
 import json
 import os
@@ -13,6 +14,21 @@ from pypdf import PdfReader
 MAX_FILE_BYTES = 3 * 1024 * 1024
 MAX_TEXT_CHARS = 12_000
 MAX_ANALYSES_PER_SESSION = 15
+HEADING_ALIASES = {
+    "CONTACT": "CONTACT",
+    "PROFESSIONAL SUMMARY": "PROFESSIONAL SUMMARY",
+    "SUMMARY": "PROFESSIONAL SUMMARY",
+    "PROFILE": "PROFESSIONAL SUMMARY",
+    "SKILLS": "SKILLS",
+    "TECHNICAL SKILLS": "SKILLS",
+    "CORE SKILLS": "SKILLS",
+    "EXPERIENCE": "EXPERIENCE",
+    "WORK EXPERIENCE": "EXPERIENCE",
+    "PROFESSIONAL EXPERIENCE": "EXPERIENCE",
+    "EDUCATION": "EDUCATION",
+    "PROJECTS": "PROJECTS",
+    "PROJECT": "PROJECTS",
+}
 ATS_HEADINGS = {
     "CONTACT",
     "PROFESSIONAL SUMMARY",
@@ -21,6 +37,21 @@ ATS_HEADINGS = {
     "EDUCATION",
     "PROJECTS",
 }
+
+
+def canonicalize_heading(line: str):
+    key = re.sub(r"[^A-Z ]", "", line.upper())
+    key = re.sub(r"\s+", " ", key).strip()
+    if not key or len(key) > 48:
+        return None
+    if key in HEADING_ALIASES:
+        return HEADING_ALIASES[key]
+    for alias, canon in HEADING_ALIASES.items():
+        if key == alias or key.startswith(alias + " "):
+            return canon
+    return None
+
+
 MODELS_TO_TRY = (
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
@@ -113,7 +144,25 @@ h1, h2, h3, .hero-title {
   display: inline-block; margin: 0 8px 8px 0; padding: 8px 14px; border-radius: 999px;
   background: #0A0C0F; border: 1px solid #D4F562; color: #D4F562; font-size: 0.88rem;
 }
+.resume-paper {
+  background: #F6F3EB;
+  color: #1B1B1B;
+  border-radius: 14px;
+  padding: 22px 24px 20px 24px;
+  margin: 8px 0 14px 0;
+}
+.resume-paper h3 { margin: 0; font-size: 1.45rem; color: #111; font-family: "Fraunces", Georgia, serif; }
+.resume-paper .meta { color: #444; font-size: 0.82rem; margin: 6px 0 12px 0; }
+.resume-cols { display: grid; grid-template-columns: 0.34fr 0.66fr; gap: 22px; border-top: 2px solid #C8D96A; padding-top: 14px; }
+.resume-paper h5 {
+  margin: 0 0 8px 0; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: #3D4A18;
+}
+.resume-paper p { margin: 0 0 12px 0; font-size: 0.82rem; line-height: 1.45; color: #222; }
+.resume-full { margin-top: 8px; }
 .foot { color: #6E7684; font-size: 0.75rem; margin-top: 28px; }
+@media (max-width: 700px) {
+  .resume-cols { grid-template-columns: 1fr; }
+}
 
 div[data-testid="stFileUploader"] section { background: #0A0C0F; border-radius: 12px; }
 .stButton > button {
@@ -259,8 +308,8 @@ def resume_to_docx(text: str) -> bytes:
         line = raw_line.strip()
         if not line:
             continue
-        heading = line.rstrip(":").upper()
-        is_heading = heading in ATS_HEADINGS or (line.isupper() and len(line) < 40)
+        heading = canonicalize_heading(line)
+        is_heading = heading is not None
         paragraph = doc.add_paragraph()
         run = paragraph.add_run(line)
         if is_heading:
@@ -280,13 +329,13 @@ def _pdf_latin(text: str) -> str:
 def parse_resume_sections(text: str) -> dict:
     sections = {name: [] for name in ATS_HEADINGS}
     current = "CONTACT"
-    for raw in (text or "").splitlines():
+    for raw in (text or "").replace("\\n", "\n").splitlines():
         line = raw.strip()
         if not line:
             continue
-        key = line.rstrip(":").upper()
-        if key in ATS_HEADINGS:
-            current = key
+        heading = canonicalize_heading(line)
+        if heading:
+            current = heading
             continue
         sections.setdefault(current, []).append(line)
     return sections
@@ -340,11 +389,11 @@ def resume_to_ats_pdf(text: str) -> bytes:
         if not line:
             pdf.ln(3)
             continue
-        heading = line.rstrip(":").upper()
-        is_heading = heading in ATS_HEADINGS or (line.isupper() and len(line) < 40)
+        heading = canonicalize_heading(line)
+        is_heading = heading is not None
         if is_heading:
             pdf.set_font("Helvetica", "B", 12)
-            pdf.multi_cell(width, 7, _pdf_latin(line))
+            pdf.multi_cell(width, 7, _pdf_latin(heading))
             pdf.ln(1)
         else:
             pdf.set_font("Helvetica", "", 10.5)
@@ -406,6 +455,33 @@ def resume_to_pdf(text: str) -> bytes:
     for key, lines in leftover:
         full.block(key, lines)
     return bytes(pdf.output())
+
+
+def _preview_block(title: str, lines: list) -> str:
+    if not lines:
+        return ""
+    body = "<br>".join(html.escape(item) for item in lines)
+    return f"<h5>{html.escape(title)}</h5><p>{body}</p>"
+
+
+def resume_preview_html(text: str) -> str:
+    sections = parse_resume_sections(text)
+    contact = sections.get("CONTACT") or []
+    name = html.escape(contact[0] if contact else "Resume")
+    details = html.escape(" · ".join(contact[1:]))
+    left = _preview_block("Skills", sections.get("SKILLS") or [])
+    right = _preview_block("Professional summary", sections.get("PROFESSIONAL SUMMARY") or [])
+    right += _preview_block("Experience", sections.get("EXPERIENCE") or [])
+    full = _preview_block("Education", sections.get("EDUCATION") or [])
+    full += _preview_block("Projects", sections.get("PROJECTS") or [])
+    return (
+        '<div class="resume-paper">'
+        f"<h3>{name}</h3>"
+        f'<p class="meta">{details}</p>'
+        f'<div class="resume-cols"><div>{left}</div><div>{right}</div></div>'
+        f'<div class="resume-full">{full}</div>'
+        "</div>"
+    )
 
 
 def gate_password() -> bool:
@@ -507,16 +583,18 @@ def render_results(result: dict) -> None:
     if ats_resume:
         st.markdown("#### ATS-friendly resume")
         st.caption(
-            "Two-column PDF (skills left, experience right). Text is drawn left column first, "
-            "then right, so parsers read Skills then Experience — not mixed lines. "
-            "Use 1-column ATS PDF for strict portals. Check every fact before you apply."
+            "Layout preview below is two-column (same as Download PDF). "
+            "The raw text is one column on purpose — that is what we send to ATS as TXT/DOCX. "
+            "Use 1-column ATS PDF for strict portals."
         )
-        st.text_area(
-            "ATS resume text",
-            value=ats_resume,
-            height=280,
-            label_visibility="collapsed",
-        )
+        st.markdown(resume_preview_html(ats_resume), unsafe_allow_html=True)
+        with st.expander("Raw text (1 column)"):
+            st.text_area(
+                "ATS resume text",
+                value=ats_resume,
+                height=220,
+                label_visibility="collapsed",
+            )
         dl1, dl2, dl3, dl4 = st.columns(4)
         with dl1:
             st.download_button(
