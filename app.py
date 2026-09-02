@@ -193,7 +193,8 @@ Return ONLY valid JSON with this shape:
   "missing_skills": ["<skill>", "..."],
   "resume_suggestions": ["<actionable edit>", "..."],
   "interview_questions": ["<question>", "..."],
-  "recommended_job_roles": ["<role title>", "..."]
+  "recommended_job_roles": ["<role title>", "..."],
+  "ats_friendly_resume": "<full plain-text resume, use \\\\n for new lines>"
 }}
 
 Rules:
@@ -202,6 +203,11 @@ Rules:
 - 5-10 matched_skills, 5-10 missing_skills, 5-8 resume_suggestions, 8-12 interview_questions (mix behavioral and technical), 3 recommended_job_roles.
 - Suggestions must tell the candidate what to add or rewrite. No generic "be confident".
 - If the JD is outside India, still analyze it; keep advice practical.
+- ats_friendly_resume: rewrite the SAME person for THIS JD in ATS-safe plain text.
+  Use headings exactly: CONTACT, PROFESSIONAL SUMMARY, SKILLS, EXPERIENCE, EDUCATION, PROJECTS (omit a heading if the original has no data).
+  Single column. No tables, columns, icons, or photos. Standard bullets with hyphen.
+  Mirror JD keywords only where the original resume supports them. Do not invent employers, titles, dates, degrees, or metrics.
+  Keep Indian degree names and notice/CTC only if they already appear. Target 400-700 words.
 
 RESUME:
 {resume_text}
@@ -218,6 +224,7 @@ JOB DESCRIPTION:
                 generation_config={
                     "temperature": 0.3,
                     "response_mime_type": "application/json",
+                    "max_output_tokens": 8192,
                 },
             )
             response = model.generate_content(prompt)
@@ -234,6 +241,30 @@ def chips(items, kind: str) -> str:
     cls = "chip chip-in" if kind == "in" else "chip chip-out"
     bits = "".join(f'<span class="{cls}">{item}</span>' for item in items or [])
     return f'<div class="chips">{bits}</div>'
+
+
+def resume_to_docx(text: str) -> bytes:
+    doc = Document()
+    for raw_line in (text or "").splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        heading = line.rstrip(":").upper()
+        is_heading = heading in {
+            "CONTACT",
+            "PROFESSIONAL SUMMARY",
+            "SKILLS",
+            "EXPERIENCE",
+            "EDUCATION",
+            "PROJECTS",
+        } or (line.isupper() and len(line) < 40)
+        paragraph = doc.add_paragraph()
+        run = paragraph.add_run(line)
+        if is_heading:
+            run.bold = True
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    return buffer.getvalue()
 
 
 def gate_password() -> bool:
@@ -271,7 +302,7 @@ def render_hero() -> None:
         <p class="hero-title">Go from resume to<br><em>interview-ready</em> in seconds.</p>
         <p class="hero-sub">
           Upload your resume, paste the job. Get a fit score, missing keywords,
-          edit suggestions, and interview questions — for Indian IT hiring.
+          an ATS-friendly rewrite, and interview questions — for Indian IT hiring.
         </p>
         <div class="stats">
           <div class="stat"><b>1 click</b><span>full analysis</span></div>
@@ -292,8 +323,9 @@ def render_below_fold() -> None:
         <div class="cards">
           <div class="card"><div class="tag">Score</div><h4>Fit audit</h4><p>Original resume vs this JD. See the match score before you apply.</p></div>
           <div class="card"><div class="tag">Keywords</div><h4>Search match</h4><p>Matched vs missing skills side by side — the words recruiters actually search.</p></div>
-          <div class="card"><div class="tag">Resume</div><h4>Edit suggestions</h4><p>What to add or rewrite. Advice only in V1 — not a full PDF rewrite yet.</p></div>
+          <div class="card"><div class="tag">Resume</div><h4>Edit suggestions</h4><p>What to add or rewrite, plus a full ATS-safe version you can download.</p></div>
           <div class="card"><div class="tag">Interview</div><h4>Practice kit</h4><p>Behavioral and technical questions aimed at this role, not a generic bank.</p></div>
+          <div class="card"><div class="tag">ATS</div><h4>ATS-friendly resume</h4><p>Plain single-column rewrite you can copy or download as TXT/DOCX. No invented jobs.</p></div>
         </div>
         <div class="section-label">How it works</div>
         <div class="steps">
@@ -329,6 +361,37 @@ def render_results(result: dict) -> None:
     with right:
         st.markdown("#### Missing")
         st.markdown(chips(result.get("missing_skills"), "out"), unsafe_allow_html=True)
+
+    ats_resume = (result.get("ats_friendly_resume") or "").strip()
+    if ats_resume:
+        st.markdown("#### ATS-friendly resume")
+        st.caption(
+            "Single-column rewrite for this JD. Check every fact before you apply. "
+            "Paste into Word or upload the DOCX. Fancy templates often fail ATS parses."
+        )
+        st.text_area(
+            "ATS resume text",
+            value=ats_resume,
+            height=280,
+            label_visibility="collapsed",
+        )
+        dl1, dl2 = st.columns(2)
+        with dl1:
+            st.download_button(
+                "Download .txt",
+                data=ats_resume.encode("utf-8"),
+                file_name="JDFit_ATS_resume.txt",
+                mime="text/plain",
+                key="dl_ats_txt",
+            )
+        with dl2:
+            st.download_button(
+                "Download .docx",
+                data=resume_to_docx(ats_resume),
+                file_name="JDFit_ATS_resume.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                key="dl_ats_docx",
+            )
 
     st.markdown("#### Resume edits")
     for item in result.get("resume_suggestions") or []:
@@ -392,7 +455,7 @@ def main():
 
     st.markdown(
         '<p class="foot">JDFit MVP · resumes processed in memory, not saved · '
-        "do not upload documents you cannot share · cover letter and PDF rewrite come later</p>",
+        "do not upload documents you cannot share · review the ATS rewrite before you apply</p>",
         unsafe_allow_html=True,
     )
 
