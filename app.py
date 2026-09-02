@@ -18,6 +18,114 @@ MODELS_TO_TRY = (
     "gemini-flash-latest",
 )
 
+CSS = """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+html, body, [data-testid="stAppViewContainer"], .stApp {
+  background: #0A0C0F !important;
+  color: #F3F0E8;
+  font-family: "DM Sans", sans-serif;
+}
+[data-testid="stHeader"] { background: transparent !important; }
+[data-testid="stToolbar"] { visibility: hidden; }
+#MainMenu, footer, [data-testid="stStatusWidget"] { visibility: hidden; }
+.block-container { padding-top: 1.2rem; max-width: 1080px; }
+
+h1, h2, h3, .hero-title {
+  font-family: "Fraunces", Georgia, serif;
+  letter-spacing: -0.03em;
+}
+
+.nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 4px 0 18px 0; border-bottom: 1px solid #232833; margin-bottom: 28px;
+}
+.nav-brand { font-family: "Fraunces", serif; font-size: 1.35rem; font-weight: 600; color: #F3F0E8; }
+.nav-meta { font-size: 0.8rem; color: #9AA3B2; }
+
+.hero-kicker {
+  display: inline-block; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase; color: #0A0C0F; background: #D4F562; padding: 4px 10px; border-radius: 999px;
+  margin-bottom: 14px;
+}
+.hero-title { font-size: 3rem; line-height: 1.08; margin: 0 0 12px 0; color: #F3F0E8; }
+.hero-title em { font-style: italic; color: #D4F562; font-weight: 500; }
+.hero-sub { font-size: 1.05rem; color: #B7BEC9; max-width: 640px; line-height: 1.5; margin-bottom: 8px; }
+
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 22px 0 8px 0; }
+.stat {
+  background: #14181F; border: 1px solid #232833; border-radius: 14px; padding: 16px 14px;
+}
+.stat b { display: block; font-family: "Fraunces", serif; font-size: 1.45rem; color: #D4F562; }
+.stat span { font-size: 0.78rem; color: #9AA3B2; }
+
+.section-label {
+  font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: #9AA3B2;
+  margin: 36px 0 12px 0;
+}
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.card {
+  background: #14181F; border: 1px solid #232833; border-radius: 16px; padding: 18px 18px 16px 18px;
+}
+.card h4 { margin: 0 0 6px 0; font-size: 1.05rem; color: #F3F0E8; font-family: "Fraunces", serif; }
+.card p { margin: 0; color: #9AA3B2; font-size: 0.9rem; line-height: 1.45; }
+.card .tag { font-size: 0.7rem; color: #D4F562; font-weight: 600; margin-bottom: 8px; }
+
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.step { background: #14181F; border-radius: 16px; padding: 16px; border: 1px solid #232833; }
+.step .n { color: #D4F562; font-family: "Fraunces", serif; font-size: 1.2rem; }
+.step h4 { margin: 6px 0 4px 0; font-size: 0.95rem; }
+.step p { margin: 0; color: #9AA3B2; font-size: 0.8rem; }
+
+.panel {
+  background: #14181F; border: 1px solid #232833; border-radius: 20px;
+  padding: 8px 8px 18px 8px; margin-top: 8px;
+}
+.score-wrap {
+  background: linear-gradient(180deg, #1A2114 0%, #14181F 70%);
+  border: 1px solid #3A4A22; border-radius: 20px; padding: 22px 24px; margin: 8px 0 16px 0;
+}
+.score-num { font-family: "Fraunces", serif; font-size: 3.4rem; line-height: 1; color: #D4F562; }
+.score-label { color: #9AA3B2; font-size: 0.85rem; margin-top: 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border-radius: 999px; padding: 6px 12px; font-size: 0.82rem; border: 1px solid #232833;
+}
+.chip-in { background: #1A2A1C; color: #C8E6B0; border-color: #2E4A30; }
+.chip-out { background: #2A1C16; color: #F0C4B0; border-color: #4A3228; }
+.q-item, .s-item {
+  background: #0A0C0F; border: 1px solid #232833; border-radius: 12px;
+  padding: 12px 14px; margin-bottom: 8px; font-size: 0.92rem; color: #E6E3DA;
+}
+.q-item b { color: #D4F562; margin-right: 8px; }
+.role-pill {
+  display: inline-block; margin: 0 8px 8px 0; padding: 8px 14px; border-radius: 999px;
+  background: #0A0C0F; border: 1px solid #D4F562; color: #D4F562; font-size: 0.88rem;
+}
+.foot { color: #6E7684; font-size: 0.75rem; margin-top: 28px; }
+
+div[data-testid="stFileUploader"] section { background: #0A0C0F; border-radius: 12px; }
+.stButton > button {
+  background: #D4F562 !important; color: #0A0C0F !important; border: 0 !important;
+  font-weight: 600 !important; border-radius: 999px !important; padding: 0.5rem 1.4rem !important;
+}
+.stButton > button:hover { filter: brightness(1.05); }
+
+@media (max-width: 800px) {
+  .hero-title { font-size: 2.1rem; }
+  .stats, .cards, .steps { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 520px) {
+  .stats, .cards, .steps { grid-template-columns: 1fr; }
+}
+</style>
+"""
+
+
+def inject_css() -> None:
+    st.markdown(CSS, unsafe_allow_html=True)
+
 
 def secret(name: str, default: str = "") -> str:
     try:
@@ -122,16 +230,29 @@ JOB DESCRIPTION:
     raise RuntimeError(f"Gemini did not return usable JSON. Last error: {last_error}")
 
 
+def chips(items, kind: str) -> str:
+    cls = "chip chip-in" if kind == "in" else "chip chip-out"
+    bits = "".join(f'<span class="{cls}">{item}</span>' for item in items or [])
+    return f'<div class="chips">{bits}</div>'
+
+
 def gate_password() -> bool:
     expected = secret("APP_PASSWORD")
     if not expected:
         return True
     if st.session_state.get("jdfit_ok"):
         return True
-    st.title("JDFit")
-    st.caption("Private test — enter the password you were given.")
-    entered = st.text_input("Password", type="password")
-    if st.button("Enter"):
+    st.markdown(
+        """
+        <div class="nav"><div class="nav-brand">JDFit</div><div class="nav-meta">Private beta</div></div>
+        <div class="hero-kicker">Tester access</div>
+        <p class="hero-title">Enter the <em>shared password</em> to continue.</p>
+        <p class="hero-sub">This build is invite-only so the free Gemini quota lasts for the first testers.</p>
+        """,
+        unsafe_allow_html=True,
+    )
+    entered = st.text_input("Password", type="password", label_visibility="collapsed", placeholder="Password")
+    if st.button("Continue"):
         if entered == expected:
             st.session_state["jdfit_ok"] = True
             st.rerun()
@@ -139,76 +260,131 @@ def gate_password() -> bool:
     return False
 
 
+def render_marketing() -> None:
+    st.markdown(
+        """
+        <div class="nav">
+          <div class="nav-brand">JDFit</div>
+          <div class="nav-meta">Resume to interview-ready · India</div>
+        </div>
+        <div class="hero-kicker">AI career toolkit · MVP</div>
+        <p class="hero-title">Go from resume to<br><em>interview-ready</em> in seconds.</p>
+        <p class="hero-sub">
+          Upload your resume, paste the job. JDFit scores the fit, shows keywords you are missing,
+          suggests edits, and drafts interview questions — built for Indian IT hiring.
+        </p>
+        <div class="stats">
+          <div class="stat"><b>1 click</b><span>full analysis</span></div>
+          <div class="stat"><b>&lt; 30s</b><span>typical wait</span></div>
+          <div class="stat"><b>Free</b><span>to test this MVP</span></div>
+          <div class="stat"><b>No login</b><span>password for testers</span></div>
+        </div>
+        <div class="section-label">In this version</div>
+        <div class="cards">
+          <div class="card"><div class="tag">Score</div><h4>Fit audit</h4><p>Original resume vs this JD. See the match score before you apply.</p></div>
+          <div class="card"><div class="tag">Keywords</div><h4>Search match</h4><p>Matched vs missing skills side by side — the words recruiters actually search.</p></div>
+          <div class="card"><div class="tag">Resume</div><h4>Edit suggestions</h4><p>What to add or rewrite. Advice only in V1 — not a full PDF rewrite yet.</p></div>
+          <div class="card"><div class="tag">Interview</div><h4>Practice kit</h4><p>Behavioral and technical questions aimed at this role, not a generic bank.</p></div>
+        </div>
+        <div class="section-label">How it works</div>
+        <div class="steps">
+          <div class="step"><div class="n">01</div><h4>Upload resume</h4><p>PDF or DOCX. Processed in memory, not stored.</p></div>
+          <div class="step"><div class="n">02</div><h4>Paste the job</h4><p>Naukri, LinkedIn, or the company JD.</p></div>
+          <div class="step"><div class="n">03</div><h4>AI scores fit</h4><p>Gemini returns structured insights.</p></div>
+          <div class="step"><div class="n">04</div><h4>Edit and apply</h4><p>Use the gaps and questions the same day.</p></div>
+        </div>
+        <div class="section-label">Try it now</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_results(result: dict) -> None:
+    score = int(result.get("ats_score") or 0)
+    summary = result.get("score_summary") or ""
+    st.markdown(
+        f"""
+        <div class="score-wrap">
+          <div class="score-label">Fit score · AI estimate, not a real ATS</div>
+          <div class="score-num">{score}<span style="font-size:1.4rem;color:#9AA3B2"> / 100</span></div>
+          <p style="color:#C9C4B6;margin:10px 0 0 0;max-width:720px;">{summary}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.progress(min(max(score, 0), 100) / 100)
+
+    left, right = st.columns(2)
+    with left:
+        st.markdown("#### Matched")
+        st.markdown(chips(result.get("matched_skills"), "in"), unsafe_allow_html=True)
+    with right:
+        st.markdown("#### Missing")
+        st.markdown(chips(result.get("missing_skills"), "out"), unsafe_allow_html=True)
+
+    st.markdown("#### Resume edits")
+    for item in result.get("resume_suggestions") or []:
+        st.markdown(f'<div class="s-item">{item}</div>', unsafe_allow_html=True)
+
+    st.markdown("#### Interview prep")
+    for i, item in enumerate(result.get("interview_questions") or [], 1):
+        st.markdown(f'<div class="q-item"><b>{i:02d}</b>{item}</div>', unsafe_allow_html=True)
+
+    roles = result.get("recommended_job_roles") or []
+    if roles:
+        st.markdown("#### Nearby roles")
+        st.markdown(
+            "".join(f'<span class="role-pill">{role}</span>' for role in roles),
+            unsafe_allow_html=True,
+        )
+
+
 def main():
-    st.set_page_config(page_title="JDFit", page_icon=":clipboard:", layout="centered")
+    st.set_page_config(page_title="JDFit — Resume to interview-ready", page_icon="J", layout="wide")
+    inject_css()
     if not gate_password():
         return
 
     if "analyses" not in st.session_state:
         st.session_state.analyses = 0
 
-    st.title("JDFit")
-    st.caption(
-        "See how well your resume fits a job description. "
-        "AI estimate only — not a real ATS. Resumes are processed in memory and not saved."
-    )
+    render_marketing()
 
     resume_file = st.file_uploader("Resume (PDF or DOCX)", type=["pdf", "docx"])
-    jd_text = st.text_area("Paste the job description", height=220, placeholder="Paste the full JD from Naukri, LinkedIn, or the company site.")
+    jd_text = st.text_area(
+        "Paste the job description",
+        height=200,
+        placeholder="Paste the full JD from Naukri, LinkedIn, or the company site.",
+    )
 
-    if st.button("Analyze fit", type="primary"):
+    go = st.button("Analyze fit — it's free")
+    if go:
         if st.session_state.analyses >= MAX_ANALYSES_PER_SESSION:
             st.warning("Session limit reached. Refresh later so the free Gemini quota lasts for other testers.")
-            return
-        if not resume_file:
+        elif not resume_file:
             st.error("Upload a resume.")
-            return
-        if not jd_text or len(jd_text.strip()) < 40:
+        elif not jd_text or len(jd_text.strip()) < 40:
             st.error("Paste a fuller job description.")
-            return
-        try:
-            with st.spinner("Reading resume and scoring against the JD..."):
-                resume_text = extract_resume(resume_file)
-                result = analyze(resume_text, jd_text.strip())
-            st.session_state.analyses += 1
-            st.session_state.result = result
-        except Exception as exc:
-            st.error(str(exc))
-            return
+        else:
+            try:
+                with st.spinner("Scoring resume against the JD…"):
+                    resume_text = extract_resume(resume_file)
+                    result = analyze(resume_text, jd_text.strip())
+                st.session_state.analyses += 1
+                st.session_state.result = result
+            except Exception as exc:
+                st.error(str(exc))
 
     result = st.session_state.get("result")
-    if not result:
-        return
+    if result:
+        st.markdown('<div class="section-label">Your toolkit</div>', unsafe_allow_html=True)
+        render_results(result)
 
-    score = int(result.get("ats_score") or 0)
-    st.subheader(f"Fit score: {score} / 100")
-    st.progress(min(max(score, 0), 100) / 100)
-    if result.get("score_summary"):
-        st.write(result["score_summary"])
-
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("**Matched skills**")
-        for item in result.get("matched_skills") or []:
-            st.markdown(f"- {item}")
-    with c2:
-        st.markdown("**Missing skills**")
-        for item in result.get("missing_skills") or []:
-            st.markdown(f"- {item}")
-
-    st.markdown("**What to change on the resume**")
-    for item in result.get("resume_suggestions") or []:
-        st.markdown(f"- {item}")
-
-    st.markdown("**Interview questions to practice**")
-    for item in result.get("interview_questions") or []:
-        st.markdown(f"- {item}")
-
-    st.markdown("**Nearby roles to consider**")
-    for item in result.get("recommended_job_roles") or []:
-        st.markdown(f"- {item}")
-
-    st.caption("JDFit MVP · free Gemini quota · do not upload confidential employer documents you cannot share.")
+    st.markdown(
+        '<p class="foot">JDFit MVP · resumes processed in memory, not saved · '
+        "do not upload documents you cannot share · cover letter and PDF rewrite come later</p>",
+        unsafe_allow_html=True,
+    )
 
 
 if __name__ == "__main__":
