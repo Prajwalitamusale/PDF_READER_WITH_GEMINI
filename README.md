@@ -1,6 +1,6 @@
 # JDFit
 
-India-first resume vs job-description fit check. Upload a PDF/DOCX resume, paste a JD, get a score, skill gaps, an ATS-friendly rewrite (copy or download TXT/DOCX), and interview questions.
+India-first resume vs job-description fit check. Upload a PDF/DOCX resume, paste a JD, get a score, skill gaps, an ATS-friendly rewrite (PDF / DOCX / TXT), and interview questions.
 
 Not a real ATS. Gemini estimate only. Files are not stored.
 

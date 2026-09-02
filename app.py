@@ -2,15 +2,25 @@ import io
 import json
 import os
 import re
+import unicodedata
 
 import google.generativeai as genai
 import streamlit as st
 from docx import Document
+from fpdf import FPDF
 from pypdf import PdfReader
 
 MAX_FILE_BYTES = 3 * 1024 * 1024
 MAX_TEXT_CHARS = 12_000
 MAX_ANALYSES_PER_SESSION = 15
+ATS_HEADINGS = {
+    "CONTACT",
+    "PROFESSIONAL SUMMARY",
+    "SKILLS",
+    "EXPERIENCE",
+    "EDUCATION",
+    "PROJECTS",
+}
 MODELS_TO_TRY = (
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
@@ -250,14 +260,7 @@ def resume_to_docx(text: str) -> bytes:
         if not line:
             continue
         heading = line.rstrip(":").upper()
-        is_heading = heading in {
-            "CONTACT",
-            "PROFESSIONAL SUMMARY",
-            "SKILLS",
-            "EXPERIENCE",
-            "EDUCATION",
-            "PROJECTS",
-        } or (line.isupper() and len(line) < 40)
+        is_heading = heading in ATS_HEADINGS or (line.isupper() and len(line) < 40)
         paragraph = doc.add_paragraph()
         run = paragraph.add_run(line)
         if is_heading:
@@ -265,6 +268,36 @@ def resume_to_docx(text: str) -> bytes:
     buffer = io.BytesIO()
     doc.save(buffer)
     return buffer.getvalue()
+
+
+def _pdf_latin(text: str) -> str:
+    stripped = "".join(
+        ch for ch in unicodedata.normalize("NFKD", text) if not unicodedata.combining(ch)
+    )
+    return stripped.encode("latin-1", "replace").decode("latin-1")
+
+
+def resume_to_pdf(text: str) -> bytes:
+    pdf = FPDF(format="A4", unit="mm")
+    pdf.set_margins(18, 16, 18)
+    pdf.set_auto_page_break(auto=True, margin=16)
+    pdf.add_page()
+    width = pdf.epw
+    for raw_line in (text or "").splitlines():
+        line = raw_line.strip()
+        if not line:
+            pdf.ln(3)
+            continue
+        heading = line.rstrip(":").upper()
+        is_heading = heading in ATS_HEADINGS or (line.isupper() and len(line) < 40)
+        if is_heading:
+            pdf.set_font("Helvetica", "B", 12)
+            pdf.multi_cell(width, 7, _pdf_latin(line))
+            pdf.ln(1)
+        else:
+            pdf.set_font("Helvetica", "", 10.5)
+            pdf.multi_cell(width, 5.6, _pdf_latin(line))
+    return bytes(pdf.output())
 
 
 def gate_password() -> bool:
@@ -325,7 +358,7 @@ def render_below_fold() -> None:
           <div class="card"><div class="tag">Keywords</div><h4>Search match</h4><p>Matched vs missing skills side by side — the words recruiters actually search.</p></div>
           <div class="card"><div class="tag">Resume</div><h4>Edit suggestions</h4><p>What to add or rewrite, plus a full ATS-safe version you can download.</p></div>
           <div class="card"><div class="tag">Interview</div><h4>Practice kit</h4><p>Behavioral and technical questions aimed at this role, not a generic bank.</p></div>
-          <div class="card"><div class="tag">ATS</div><h4>ATS-friendly resume</h4><p>Plain single-column rewrite you can copy or download as TXT/DOCX. No invented jobs.</p></div>
+          <div class="card"><div class="tag">ATS</div><h4>ATS-friendly resume</h4><p>Plain single-column rewrite. Download as PDF, DOCX, or TXT. No invented jobs.</p></div>
         </div>
         <div class="section-label">How it works</div>
         <div class="steps">
@@ -367,7 +400,7 @@ def render_results(result: dict) -> None:
         st.markdown("#### ATS-friendly resume")
         st.caption(
             "Single-column rewrite for this JD. Check every fact before you apply. "
-            "Paste into Word or upload the DOCX. Fancy templates often fail ATS parses."
+            "Download PDF for applications. DOCX/TXT if a portal prefers those."
         )
         st.text_area(
             "ATS resume text",
@@ -375,14 +408,14 @@ def render_results(result: dict) -> None:
             height=280,
             label_visibility="collapsed",
         )
-        dl1, dl2 = st.columns(2)
+        dl1, dl2, dl3 = st.columns(3)
         with dl1:
             st.download_button(
-                "Download .txt",
-                data=ats_resume.encode("utf-8"),
-                file_name="JDFit_ATS_resume.txt",
-                mime="text/plain",
-                key="dl_ats_txt",
+                "Download PDF",
+                data=resume_to_pdf(ats_resume),
+                file_name="JDFit_ATS_resume.pdf",
+                mime="application/pdf",
+                key="dl_ats_pdf",
             )
         with dl2:
             st.download_button(
@@ -391,6 +424,14 @@ def render_results(result: dict) -> None:
                 file_name="JDFit_ATS_resume.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 key="dl_ats_docx",
+            )
+        with dl3:
+            st.download_button(
+                "Download .txt",
+                data=ats_resume.encode("utf-8"),
+                file_name="JDFit_ATS_resume.txt",
+                mime="text/plain",
+                key="dl_ats_txt",
             )
 
     st.markdown("#### Resume edits")
