@@ -277,7 +277,59 @@ def _pdf_latin(text: str) -> str:
     return stripped.encode("latin-1", "replace").decode("latin-1")
 
 
-def resume_to_pdf(text: str) -> bytes:
+def parse_resume_sections(text: str) -> dict:
+    sections = {name: [] for name in ATS_HEADINGS}
+    current = "CONTACT"
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        key = line.rstrip(":").upper()
+        if key in ATS_HEADINGS:
+            current = key
+            continue
+        sections.setdefault(current, []).append(line)
+    return sections
+
+
+class _Column:
+    def __init__(self, pdf: FPDF, x: float, w: float, y: float, bottom: float):
+        self.pdf = pdf
+        self.x = x
+        self.w = w
+        self.y = y
+        self.bottom = bottom
+
+    def _break_if_needed(self, need: float) -> None:
+        if self.y + need <= self.bottom:
+            return
+        self.pdf.add_page()
+        self.y = self.pdf.t_margin
+
+    def heading(self, title: str) -> None:
+        self._break_if_needed(8)
+        self.pdf.set_xy(self.x, self.y)
+        self.pdf.set_font("Helvetica", "B", 10)
+        self.pdf.multi_cell(self.w, 6, _pdf_latin(title))
+        self.y = self.pdf.get_y() + 0.8
+
+    def line(self, text: str) -> None:
+        self._break_if_needed(6)
+        self.pdf.set_xy(self.x, self.y)
+        self.pdf.set_font("Helvetica", "", 9.5)
+        self.pdf.multi_cell(self.w, 5, _pdf_latin(text))
+        self.y = self.pdf.get_y()
+
+    def block(self, title: str, lines: list) -> None:
+        if not lines:
+            return
+        self.heading(title)
+        for line in lines:
+            self.line(line)
+        self.y += 2.5
+
+
+def resume_to_ats_pdf(text: str) -> bytes:
     pdf = FPDF(format="A4", unit="mm")
     pdf.set_margins(18, 16, 18)
     pdf.set_auto_page_break(auto=True, margin=16)
@@ -297,6 +349,62 @@ def resume_to_pdf(text: str) -> bytes:
         else:
             pdf.set_font("Helvetica", "", 10.5)
             pdf.multi_cell(width, 5.6, _pdf_latin(line))
+    return bytes(pdf.output())
+
+
+def resume_to_pdf(text: str) -> bytes:
+    """Two-column layout painted left-then-right so ATS text order stays Skills, then Experience."""
+    sections = parse_resume_sections(text)
+    pdf = FPDF(format="A4", unit="mm")
+    pdf.set_auto_page_break(False)
+    pdf.set_margins(14, 14, 14)
+    pdf.add_page()
+    bottom = pdf.h - 14
+    page_w = pdf.epw
+
+    contact = sections.get("CONTACT") or []
+    name = contact[0] if contact else "Resume"
+    details = contact[1:]
+
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.multi_cell(page_w, 8, _pdf_latin(name))
+    if details:
+        pdf.set_font("Helvetica", "", 9)
+        pdf.multi_cell(page_w, 5, _pdf_latin("   |   ".join(details)))
+    pdf.ln(2)
+    y_rule = pdf.get_y()
+    pdf.set_draw_color(160, 180, 70)
+    pdf.set_line_width(0.45)
+    pdf.line(pdf.l_margin, y_rule, pdf.l_margin + page_w, y_rule)
+    pdf.ln(5)
+    y_cols = pdf.get_y()
+
+    gap = 7
+    left_w = page_w * 0.34
+    right_w = page_w - left_w - gap
+    left = _Column(pdf, pdf.l_margin, left_w, y_cols, bottom)
+    left.block("SKILLS", sections.get("SKILLS") or [])
+
+    right = _Column(pdf, pdf.l_margin + left_w + gap, right_w, y_cols, bottom)
+    right.block("PROFESSIONAL SUMMARY", sections.get("PROFESSIONAL SUMMARY") or [])
+    right.block("EXPERIENCE", sections.get("EXPERIENCE") or [])
+
+    y_next = max(left.y, right.y) + 4
+    if y_next > bottom - 20:
+        pdf.add_page()
+        y_next = pdf.t_margin
+    pdf.set_xy(pdf.l_margin, y_next)
+    pdf.set_auto_page_break(auto=True, margin=14)
+    full = _Column(pdf, pdf.l_margin, page_w, pdf.get_y(), pdf.h - 14)
+    full.block("EDUCATION", sections.get("EDUCATION") or [])
+    full.block("PROJECTS", sections.get("PROJECTS") or [])
+    leftover = [
+        (key, lines)
+        for key, lines in sections.items()
+        if key not in ATS_HEADINGS and lines
+    ]
+    for key, lines in leftover:
+        full.block(key, lines)
     return bytes(pdf.output())
 
 
@@ -358,7 +466,7 @@ def render_below_fold() -> None:
           <div class="card"><div class="tag">Keywords</div><h4>Search match</h4><p>Matched vs missing skills side by side — the words recruiters actually search.</p></div>
           <div class="card"><div class="tag">Resume</div><h4>Edit suggestions</h4><p>What to add or rewrite, plus a full ATS-safe version you can download.</p></div>
           <div class="card"><div class="tag">Interview</div><h4>Practice kit</h4><p>Behavioral and technical questions aimed at this role, not a generic bank.</p></div>
-          <div class="card"><div class="tag">ATS</div><h4>ATS-friendly resume</h4><p>Plain single-column rewrite. Download as PDF, DOCX, or TXT. No invented jobs.</p></div>
+          <div class="card"><div class="tag">ATS</div><h4>ATS-friendly resume</h4><p>Two-column PDF for humans, plus a 1-column ATS PDF, DOCX, and TXT. No invented jobs.</p></div>
         </div>
         <div class="section-label">How it works</div>
         <div class="steps">
@@ -399,8 +507,9 @@ def render_results(result: dict) -> None:
     if ats_resume:
         st.markdown("#### ATS-friendly resume")
         st.caption(
-            "Single-column rewrite for this JD. Check every fact before you apply. "
-            "Download PDF for applications. DOCX/TXT if a portal prefers those."
+            "Two-column PDF (skills left, experience right). Text is drawn left column first, "
+            "then right, so parsers read Skills then Experience — not mixed lines. "
+            "Use 1-column ATS PDF for strict portals. Check every fact before you apply."
         )
         st.text_area(
             "ATS resume text",
@@ -408,16 +517,24 @@ def render_results(result: dict) -> None:
             height=280,
             label_visibility="collapsed",
         )
-        dl1, dl2, dl3 = st.columns(3)
+        dl1, dl2, dl3, dl4 = st.columns(4)
         with dl1:
             st.download_button(
                 "Download PDF",
                 data=resume_to_pdf(ats_resume),
-                file_name="JDFit_ATS_resume.pdf",
+                file_name="JDFit_resume.pdf",
                 mime="application/pdf",
                 key="dl_ats_pdf",
             )
         with dl2:
+            st.download_button(
+                "1-column ATS PDF",
+                data=resume_to_ats_pdf(ats_resume),
+                file_name="JDFit_ATS_resume.pdf",
+                mime="application/pdf",
+                key="dl_ats_pdf_single",
+            )
+        with dl3:
             st.download_button(
                 "Download .docx",
                 data=resume_to_docx(ats_resume),
@@ -425,7 +542,7 @@ def render_results(result: dict) -> None:
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 key="dl_ats_docx",
             )
-        with dl3:
+        with dl4:
             st.download_button(
                 "Download .txt",
                 data=ats_resume.encode("utf-8"),
