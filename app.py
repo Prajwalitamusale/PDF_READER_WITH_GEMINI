@@ -28,9 +28,9 @@ html, body, [data-testid="stAppViewContainer"], .stApp {
   font-family: "DM Sans", sans-serif;
 }
 [data-testid="stHeader"] { background: transparent !important; }
-[data-testid="stToolbar"] { visibility: hidden; }
+[data-testid="stToolbar"], [data-testid="stDecoration"] { display: none !important; }
 #MainMenu, footer, [data-testid="stStatusWidget"] { visibility: hidden; }
-.block-container { padding-top: 1.2rem; max-width: 1080px; }
+.block-container { padding-top: 1.4rem; max-width: 980px; }
 
 h1, h2, h3, .hero-title {
   font-family: "Fraunces", Georgia, serif;
@@ -49,7 +49,7 @@ h1, h2, h3, .hero-title {
   text-transform: uppercase; color: #0A0C0F; background: #D4F562; padding: 4px 10px; border-radius: 999px;
   margin-bottom: 14px;
 }
-.hero-title { font-size: 3rem; line-height: 1.08; margin: 0 0 12px 0; color: #F3F0E8; }
+.hero-title { font-size: 3.15rem !important; line-height: 1.08 !important; margin: 0 0 14px 0; color: #F3F0E8; }
 .hero-title em { font-style: italic; color: #D4F562; font-weight: 500; }
 .hero-sub { font-size: 1.05rem; color: #B7BEC9; max-width: 640px; line-height: 1.5; margin-bottom: 8px; }
 
@@ -62,7 +62,7 @@ h1, h2, h3, .hero-title {
 
 .section-label {
   font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: #9AA3B2;
-  margin: 36px 0 12px 0;
+  margin: 22px 0 10px 0;
 }
 .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .card {
@@ -260,7 +260,7 @@ def gate_password() -> bool:
     return False
 
 
-def render_marketing() -> None:
+def render_hero() -> None:
     st.markdown(
         """
         <div class="nav">
@@ -270,15 +270,24 @@ def render_marketing() -> None:
         <div class="hero-kicker">AI career toolkit · MVP</div>
         <p class="hero-title">Go from resume to<br><em>interview-ready</em> in seconds.</p>
         <p class="hero-sub">
-          Upload your resume, paste the job. JDFit scores the fit, shows keywords you are missing,
-          suggests edits, and drafts interview questions — built for Indian IT hiring.
+          Upload your resume, paste the job. Get a fit score, missing keywords,
+          edit suggestions, and interview questions — for Indian IT hiring.
         </p>
         <div class="stats">
           <div class="stat"><b>1 click</b><span>full analysis</span></div>
           <div class="stat"><b>&lt; 30s</b><span>typical wait</span></div>
           <div class="stat"><b>Free</b><span>to test this MVP</span></div>
-          <div class="stat"><b>No login</b><span>password for testers</span></div>
+          <div class="stat"><b>Invite</b><span>shared tester password</span></div>
         </div>
+        <div class="section-label">Try it now</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_below_fold() -> None:
+    st.markdown(
+        """
         <div class="section-label">In this version</div>
         <div class="cards">
           <div class="card"><div class="tag">Score</div><h4>Fit audit</h4><p>Original resume vs this JD. See the match score before you apply.</p></div>
@@ -293,7 +302,6 @@ def render_marketing() -> None:
           <div class="step"><div class="n">03</div><h4>AI scores fit</h4><p>Gemini returns structured insights.</p></div>
           <div class="step"><div class="n">04</div><h4>Edit and apply</h4><p>Use the gaps and questions the same day.</p></div>
         </div>
-        <div class="section-label">Try it now</div>
         """,
         unsafe_allow_html=True,
     )
@@ -348,12 +356,12 @@ def main():
     if "analyses" not in st.session_state:
         st.session_state.analyses = 0
 
-    render_marketing()
+    render_hero()
 
     resume_file = st.file_uploader("Resume (PDF or DOCX)", type=["pdf", "docx"])
     jd_text = st.text_area(
         "Paste the job description",
-        height=200,
+        height=180,
         placeholder="Paste the full JD from Naukri, LinkedIn, or the company site.",
     )
 
@@ -379,6 +387,8 @@ def main():
     if result:
         st.markdown('<div class="section-label">Your toolkit</div>', unsafe_allow_html=True)
         render_results(result)
+
+    render_below_fold()
 
     st.markdown(
         '<p class="foot">JDFit MVP · resumes processed in memory, not saved · '
